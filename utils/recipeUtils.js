@@ -54,6 +54,11 @@ export async function fetchRecipeFromAPI(ingredients) {
 
     const generatedRecipe = await response.json()
     
+    // If server indicates to use fallback, return as-is (will be handled by hook)
+    if (generatedRecipe._fallback || generatedRecipe._useFallback) {
+        return generatedRecipe
+    }
+    
     // Ensure recipe has all required fields
     if (generatedRecipe.name && generatedRecipe.instructions) {
         return generatedRecipe

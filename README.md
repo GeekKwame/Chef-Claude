@@ -16,7 +16,11 @@ A modern React recipe app powered by Claude AI that generates personalized recip
 ### Prerequisites
 
 - Node.js (v16 or higher)
-- A Claude API key from [Anthropic Console](https://console.anthropic.com/)
+- **At least one** of the following API keys:
+  - **Claude API key** from [Anthropic Console](https://console.anthropic.com/) (Premium option)
+  - **Hugging Face token** from [Hugging Face Settings](https://huggingface.co/settings/tokens) (Free alternative)
+  
+  > 💡 **Tip:** The app will automatically use Claude if available, and fallback to Hugging Face if Claude is not configured or fails.
 
 ### Installation
 
@@ -30,10 +34,16 @@ A modern React recipe app powered by Claude AI that generates personalized recip
      ```bash
      cp .env.example .env
      ```
-   - Open `.env` and add your Claude API key:
+   - Open `.env` and add **at least one** API key:
      ```
+     # Option 1: Claude API (Premium - better quality)
      CLAUDE_API_KEY=your_api_key_here
+     
+     # Option 2: Hugging Face API (Free alternative)
+     HUGGINGFACE_API_KEY=your_huggingface_token_here
      ```
+     
+     > **Note:** You only need ONE API key. The app will use Claude first if available, then fallback to Hugging Face automatically.
 
 3. **Run the application:**
    

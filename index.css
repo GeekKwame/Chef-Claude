@@ -410,6 +410,23 @@ ul.ingredients-list {
     font-size: 1rem;
 }
 
+.recipe-info {
+    background-color: #DBEAFE;
+    border: 1px solid #93C5FD;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #1E40AF;
+}
+
+.recipe-info span {
+    font-size: 1rem;
+}
+
 .get-recipe-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;

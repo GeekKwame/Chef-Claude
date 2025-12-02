@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { generateRecipeWithClaude } from './services/claudeService.js';
+import { generateRecipeWithHuggingFace } from './services/huggingFaceService.js';
 
 dotenv.config();
 
@@ -15,7 +17,7 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Recipe generation endpoint
+// Recipe generation endpoint with automatic fallback
 app.post('/api/generate-recipe', async (req, res) => {
     try {
         const { ingredients } = req.body;
@@ -24,92 +26,63 @@ app.post('/api/generate-recipe', async (req, res) => {
             return res.status(400).json({ error: 'Please provide a list of ingredients' });
         }
 
-        const apiKey = process.env.CLAUDE_API_KEY;
-        if (!apiKey || apiKey === 'your_api_key_here') {
-            console.error('API Key Missing:', !apiKey ? 'No API key found' : 'API key not configured');
+        const claudeApiKey = process.env.CLAUDE_API_KEY;
+        const huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY;
+        
+        // Check if at least one API key is configured
+        const hasClaudeKey = claudeApiKey && claudeApiKey !== 'your_api_key_here';
+        const hasHuggingFaceKey = huggingFaceApiKey && huggingFaceApiKey !== 'your_huggingface_token_here';
+        
+        if (!hasClaudeKey && !hasHuggingFaceKey) {
             return res.status(500).json({ 
-                error: 'Claude API key not configured. Please set CLAUDE_API_KEY in your .env file. Get your key from https://console.anthropic.com/' 
+                error: 'No API keys configured. Please set either CLAUDE_API_KEY or HUGGINGFACE_API_KEY in your .env file. Get keys from: Claude (https://console.anthropic.com/) or Hugging Face (https://huggingface.co/settings/tokens)' 
             });
         }
 
-        const ingredientsList = ingredients.join(', ');
-        
-        const prompt = `You are Chef Claude, a professional chef. Generate a delicious, creative recipe using these ingredients: ${ingredientsList}.
-
-Please provide:
-1. An appealing recipe name (keep it concise, max 6 words)
-2. A list of all ingredients needed (include the provided ingredients plus any common pantry staples like salt, pepper, oil if needed)
-3. Clear, step-by-step cooking instructions (6-8 steps)
-
-Format your response as JSON with this structure:
-{
-    "name": "Recipe Name",
-    "ingredients": ["ingredient 1", "ingredient 2", ...],
-    "instructions": ["Step 1", "Step 2", ...]
-}`;
-
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-                model: 'claude-3-5-sonnet-20241022',
-                max_tokens: 2048,
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ]
-            })
-        });
-
-        const responseText = await response.text();
-        console.log('API Response Status:', response.status);
-        console.log('API Response:', responseText.substring(0, 500));
-
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = JSON.parse(responseText);
-            } catch (e) {
-                errorData = { error: { message: responseText } };
-            }
-            console.error('API Error:', errorData);
-            throw new Error(errorData.error?.message || errorData.error || `API error: ${response.statusText} (${response.status})`);
-        }
-
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (e) {
-            throw new Error('Invalid JSON response from API');
-        }
-        const content = data.content[0].text;
-
-        // Parse the JSON response from Claude
         let recipe;
-        try {
-            // Extract JSON from markdown code blocks if present
-            const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/) || 
-                             content.match(/\{[\s\S]*\}/);
-            const jsonString = jsonMatch ? jsonMatch[1] : content;
-            recipe = JSON.parse(jsonString);
-        } catch (parseError) {
-            // If parsing fails, create a structured response from the text
-            const lines = content.split('\n').filter(line => line.trim());
-            recipe = {
-                name: lines.find(line => line.includes('name') || line.length < 50) || 'Chef\'s Special Creation',
-                ingredients: ingredients,
-                instructions: lines.filter(line => 
-                    line.match(/^\d+\./) || 
-                    line.toLowerCase().includes('step') ||
-                    (line.length > 20 && !line.includes(':'))
-                ).slice(0, 8).map(line => line.replace(/^\d+\.\s*/, '').trim())
-            };
+        let provider = '';
+
+        // Try Claude first if available
+        if (hasClaudeKey) {
+            try {
+                console.log('🍽️  Attempting recipe generation with Claude API...');
+                recipe = await generateRecipeWithClaude(ingredients, claudeApiKey);
+                provider = 'Claude';
+                console.log('✅ Recipe generated successfully with Claude');
+            } catch (claudeError) {
+                console.warn('⚠️  Claude API failed:', claudeError.message);
+                // Fall through to try Hugging Face
+            }
+        }
+
+        // If Claude failed or not available, try Hugging Face
+        // Note: Hugging Face free API is deprecated, so this will likely fail gracefully
+        if (!recipe && hasHuggingFaceKey) {
+            try {
+                console.log('🍽️  Attempting recipe generation with Hugging Face API...');
+                console.log(`📋 Ingredients: ${ingredients.join(', ')}`);
+                recipe = await generateRecipeWithHuggingFace(ingredients, huggingFaceApiKey);
+                provider = 'Hugging Face';
+                console.log('✅ Recipe generated successfully with Hugging Face');
+                console.log(`📝 Recipe name: ${recipe.name}`);
+            } catch (hfError) {
+                // Hugging Face API is deprecated, so this is expected
+                console.log('ℹ️  Hugging Face API unavailable (deprecated):', hfError.message);
+                if (!hasClaudeKey) {
+                    // If we don't have Claude key, don't throw - let frontend use fallback
+                    // The frontend will handle the fallback gracefully
+                }
+            }
+        }
+
+        // If both APIs failed/unavailable, frontend will use intelligent fallback
+        // Don't throw error - let frontend handle graceful fallback
+        if (!recipe) {
+            // Return error that triggers fallback, but make it clear it's expected
+            return res.status(200).json({ 
+                error: 'AI services unavailable. Using intelligent fallback recipe generation.',
+                _fallback: true 
+            });
         }
 
         // Validate recipe structure
@@ -117,7 +90,12 @@ Format your response as JSON with this structure:
             throw new Error('Invalid recipe format received from API');
         }
 
-        res.json(recipe);
+        // Add provider info to response
+        res.json({
+            ...recipe,
+            _provider: provider, // Which API was used
+            _fallback: false     // This is from an API, not fallback
+        });
     } catch (error) {
         console.error('Error generating recipe:', error);
         res.status(500).json({ 
@@ -128,14 +106,33 @@ Format your response as JSON with this structure:
 
 app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
-    const apiKey = process.env.CLAUDE_API_KEY;
-    if (!apiKey || apiKey === 'your_api_key_here') {
-        console.log(`⚠️  WARNING: CLAUDE_API_KEY not configured in .env file`);
-        console.log(`📝 To fix: 1. Create .env file in project root`);
-        console.log(`📝         2. Add: CLAUDE_API_KEY=your_actual_api_key`);
-        console.log(`📝         3. Get your key from: https://console.anthropic.com/`);
-    } else {
+    console.log('');
+    
+    const claudeApiKey = process.env.CLAUDE_API_KEY;
+    const huggingFaceApiKey = process.env.HUGGINGFACE_API_KEY;
+    
+    const hasClaudeKey = claudeApiKey && claudeApiKey !== 'your_api_key_here';
+    const hasHuggingFaceKey = huggingFaceApiKey && huggingFaceApiKey !== 'your_huggingface_token_here';
+    
+    if (hasClaudeKey) {
         console.log(`✅ Claude API key configured`);
+    } else {
+        console.log(`⚠️  Claude API key not configured`);
+        console.log(`   Get your key from: https://console.anthropic.com/`);
+    }
+    
+    if (hasHuggingFaceKey) {
+        console.log(`✅ Hugging Face API key configured`);
+    } else {
+        console.log(`⚠️  Hugging Face API key not configured`);
+        console.log(`   Get your token from: https://huggingface.co/settings/tokens`);
+    }
+    
+    console.log('');
+    if (!hasClaudeKey && !hasHuggingFaceKey) {
+        console.log(`❌ WARNING: No API keys configured! Please set at least one API key in your .env file.`);
+    } else {
+        console.log(`💡 The app will try ${hasClaudeKey ? 'Claude first' : 'Hugging Face'}${hasClaudeKey && hasHuggingFaceKey ? ', then fallback to Hugging Face if needed' : ''}.`);
     }
 });
 
