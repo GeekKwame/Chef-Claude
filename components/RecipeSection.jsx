@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import LoadingSpinner from "./LoadingSpinner"
 import RecipeContent from "./RecipeContent"
 
@@ -10,14 +11,45 @@ export default function RecipeSection({
     onCloseRecipe,
     onRetryRecipe
 }) {
+    const sectionRef = useRef(null)
+    const closeButtonRef = useRef(null)
+
+    // Focus management for accessibility
+    useEffect(() => {
+        if (recipeShown && !loading && sectionRef.current) {
+            // Focus the section when recipe is shown
+            sectionRef.current.focus()
+        }
+    }, [recipeShown, loading])
+
+    // Focus close button when recipe loads
+    useEffect(() => {
+        if (recipeShown && !loading && recipe && closeButtonRef.current) {
+            closeButtonRef.current.focus()
+        }
+    }, [recipeShown, loading, recipe])
+
     if (!recipeShown) return null
 
     return (
-        <section className="recipe-section">
+        <section 
+            ref={sectionRef}
+            className="recipe-section"
+            role="region"
+            aria-labelledby="recipe-heading"
+            tabIndex={-1}
+        >
             <div className="recipe-header">
-                <h2>Recipe Generated {loading && "(Cooking...)"}</h2>
+                <h2 id="recipe-heading">
+                    Recipe Generated {loading && <span aria-label="Cooking">(Cooking...)</span>}
+                </h2>
                 {!loading && (
-                    <button onClick={onCloseRecipe} className="close-recipe-btn">
+                    <button 
+                        ref={closeButtonRef}
+                        onClick={onCloseRecipe} 
+                        className="close-recipe-btn"
+                        aria-label="Close recipe"
+                    >
                         ×
                     </button>
                 )}
@@ -31,9 +63,13 @@ export default function RecipeSection({
                     recipeError={recipeError}
                 />
             ) : (
-                <div className="error-state">
+                <div className="error-state" role="alert">
                     <p>Failed to generate recipe. Please try again.</p>
-                    <button onClick={onRetryRecipe} className="retry-btn">
+                    <button 
+                        onClick={onRetryRecipe} 
+                        className="retry-btn"
+                        aria-label="Retry recipe generation"
+                    >
                         Try Again
                     </button>
                 </div>

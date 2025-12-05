@@ -14,8 +14,12 @@ export default function IngredientsSection({
     return (
         <section className="ingredients-section">
             <div className="ingredients-header">
-                <h2>Ingredients on hand ({ingredients.length}):</h2>
-                <button onClick={onClearAll} className="clear-btn">
+                <h2>Ingredients on hand <span aria-label={`${ingredients.length} ingredients`}>({ingredients.length})</span>:</h2>
+                <button 
+                    onClick={onClearAll} 
+                    className="clear-btn"
+                    aria-label="Clear all ingredients"
+                >
                     Clear All
                 </button>
             </div>

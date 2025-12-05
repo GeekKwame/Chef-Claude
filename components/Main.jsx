@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useCallback, useMemo } from "react"
 import IngredientForm from "./IngredientForm"
 import IngredientsSection from "./IngredientsSection"
 import RecipeSection from "./RecipeSection"
@@ -15,7 +15,7 @@ export default function Main() {
         removeIngredient,
         clearAll,
         handleInputChange
-    } = useIngredients(["all the main spices", "pasta", "ground beef", "tomato paste"])
+    } = useIngredients([])
 
     const {
         recipeShown,
@@ -27,23 +27,25 @@ export default function Main() {
         resetRecipe
     } = useRecipeGenerator(ingredients)
 
-    function handleSubmit(e) {
+    const handleSubmit = useCallback((e) => {
         e.preventDefault()
         const added = addIngredient()
         if (added) {
             resetRecipe()
         }
-    }
+    }, [addIngredient, resetRecipe])
 
-    function handleRemoveIngredient(index) {
+    const handleRemoveIngredient = useCallback((index) => {
         removeIngredient(index)
         resetRecipe()
-    }
+    }, [removeIngredient, resetRecipe])
 
-    function handleClearAll() {
+    const handleClearAll = useCallback(() => {
         clearAll()
         closeRecipe()
-    }
+    }, [clearAll, closeRecipe])
+
+    const showEmptyState = useMemo(() => ingredients.length === 0, [ingredients.length])
 
     return (
         <main>
@@ -73,7 +75,7 @@ export default function Main() {
                 onRetryRecipe={generateRecipe}
             />
             
-            {ingredients.length === 0 && <EmptyState />}
+            {showEmptyState && <EmptyState />}
         </main>
     )
 }

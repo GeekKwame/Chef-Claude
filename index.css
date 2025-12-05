@@ -431,3 +431,179 @@ ul.ingredients-list {
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* Autocomplete Suggestions */
+.autocomplete-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    box-shadow: 0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06);
+    margin-top: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    list-style: none;
+    padding: 4px 0;
+    margin: 0;
+}
+
+.autocomplete-suggestions li {
+    padding: 8px 13px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #141413;
+    transition: background-color 0.15s;
+}
+
+.autocomplete-suggestions li:hover,
+.autocomplete-suggestions li:focus {
+    background-color: #F3F4F6;
+    outline: none;
+}
+
+.autocomplete-suggestions li[aria-selected="true"] {
+    background-color: #D17557;
+    color: white;
+}
+
+/* Recipe Actions */
+.recipe-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.recipe-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.save-recipe-btn,
+.copy-recipe-btn,
+.print-recipe-btn {
+    padding: 6px 12px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background: white;
+    color: #141413;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: Inter, sans-serif;
+}
+
+.save-recipe-btn:hover,
+.copy-recipe-btn:hover,
+.print-recipe-btn:hover {
+    background-color: #F3F4F6;
+    border-color: #9CA3AF;
+}
+
+.save-recipe-btn:active,
+.copy-recipe-btn:active,
+.print-recipe-btn:active {
+    transform: scale(0.98);
+}
+
+/* Error Boundary */
+.error-boundary {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-color: #FAFAF8;
+}
+
+.error-boundary-content {
+    max-width: 600px;
+    background: white;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0px 1px 3px 0px rgba(0, 0, 0, 0.10), 0px 1px 2px 0px rgba(0, 0, 0, 0.06);
+    text-align: center;
+}
+
+.error-boundary-content h2 {
+    color: #DC2626;
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.error-boundary-content p {
+    color: #6B7280;
+    margin-bottom: 24px;
+}
+
+.error-details {
+    text-align: left;
+    margin: 20px 0;
+    padding: 16px;
+    background-color: #F9FAFB;
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+}
+
+.error-details summary {
+    cursor: pointer;
+    color: #6B7280;
+    font-size: 0.875rem;
+    margin-bottom: 12px;
+}
+
+.error-details pre {
+    font-size: 0.75rem;
+    color: #DC2626;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.error-reset-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    background-color: #D17557;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-family: Inter, sans-serif;
+}
+
+.error-reset-btn:hover {
+    background-color: #B86045;
+}
+
+/* Screen Reader Only */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* Input Container with Autocomplete */
+.input-container {
+    position: relative;
+}
+
+/* Focus visible for keyboard navigation */
+*:focus-visible {
+    outline: 2px solid #D17557;
+    outline-offset: 2px;
+}

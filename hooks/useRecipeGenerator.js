@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { fetchRecipeFromAPI, generateFallbackRecipe } from "../utils/recipeUtils"
 
 export function useRecipeGenerator(ingredients) {
@@ -6,14 +6,32 @@ export function useRecipeGenerator(ingredients) {
     const [recipe, setRecipe] = useState(null)
     const [loading, setLoading] = useState(false)
     const [recipeError, setRecipeError] = useState("")
+    const abortControllerRef = useRef(null)
 
-    async function generateRecipe() {
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort()
+            }
+        }
+    }, [])
+
+    const generateRecipe = useCallback(async () => {
+        // Cancel any ongoing request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort()
+        }
+
+        // Create new abort controller
+        abortControllerRef.current = new AbortController()
+        
         setLoading(true)
         setRecipeError("")
         setRecipeShown(true)
 
         try {
-            const generatedRecipe = await fetchRecipeFromAPI(ingredients)
+            const generatedRecipe = await fetchRecipeFromAPI(ingredients, abortControllerRef.current)
             // Check if server indicated to use fallback
             if (generatedRecipe._fallback || generatedRecipe._useFallback) {
                 // Server wants us to use fallback, don't set it as error
@@ -23,6 +41,11 @@ export function useRecipeGenerator(ingredients) {
                 setRecipe(generatedRecipe)
             }
         } catch (error) {
+            // Don't handle errors if request was aborted
+            if (error.name === 'AbortError') {
+                return
+            }
+            
             console.error('Error fetching recipe:', error)
             const errorMsg = error.message || 'Failed to generate recipe'
             
@@ -37,8 +60,9 @@ export function useRecipeGenerator(ingredients) {
             setRecipe(generateFallbackRecipe(ingredients))
         } finally {
             setLoading(false)
+            abortControllerRef.current = null
         }
-    }
+    }, [ingredients])
 
     function closeRecipe() {
         setRecipeShown(false)

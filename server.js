@@ -14,13 +14,73 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Rate limiting storage (simple in-memory, consider Redis for production)
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX_REQUESTS = 20; // 20 requests per window
+
+// Simple rate limiting middleware
+function rateLimit(req, res, next) {
+    const clientId = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    if (!rateLimitStore.has(clientId)) {
+        rateLimitStore.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        return next();
+    }
+    
+    const clientData = rateLimitStore.get(clientId);
+    
+    // Reset if window expired
+    if (now > clientData.resetTime) {
+        clientData.count = 1;
+        clientData.resetTime = now + RATE_LIMIT_WINDOW;
+        return next();
+    }
+    
+    // Check limit
+    if (clientData.count >= RATE_LIMIT_MAX_REQUESTS) {
+        return res.status(429).json({ 
+            error: 'Too many requests. Please try again later.' 
+        });
+    }
+    
+    clientData.count++;
+    next();
+}
+
+// Cleanup old entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of rateLimitStore.entries()) {
+        if (now > value.resetTime) {
+            rateLimitStore.delete(key);
+        }
+    }
+}, RATE_LIMIT_WINDOW);
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limit request body size
+
+// Input sanitization helper
+function sanitizeInput(input) {
+    if (typeof input === 'string') {
+        // Remove potentially dangerous characters
+        return input.trim().replace(/[<>]/g, '');
+    }
+    if (Array.isArray(input)) {
+        return input.map(item => sanitizeInput(item));
+    }
+    return input;
+}
 
 // Recipe generation endpoint with automatic fallback
-app.post('/api/generate-recipe', async (req, res) => {
+app.post('/api/generate-recipe', rateLimit, async (req, res) => {
     try {
-        const { ingredients } = req.body;
+        let { ingredients } = req.body;
+        
+        // Sanitize input
+        ingredients = sanitizeInput(ingredients);
 
         if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
             return res.status(400).json({ error: 'Please provide a list of ingredients' });

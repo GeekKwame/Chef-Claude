@@ -6,10 +6,18 @@ A modern React recipe app powered by Claude AI that generates personalized recip
 
 - ✨ AI-powered recipe generation using Claude AI
 - 🥘 Add and manage ingredients with an intuitive interface
+- 🔍 Ingredient autocomplete with 40+ common ingredients
 - 🗑️ Remove individual ingredients or clear all at once
 - ⚡ Real-time validation (prevents duplicates and empty entries)
 - 🎨 Beautiful, responsive UI with loading states
 - 🔄 Automatic fallback to local recipe generation if API is unavailable
+- 💾 Save recipes to browser storage
+- 📋 Copy recipes to clipboard
+- 🖨️ Print recipes in formatted view
+- ♿ Full accessibility support (ARIA, keyboard navigation, screen readers)
+- 🛡️ Error boundary for graceful error handling
+- ⏱️ Request timeout and cancellation
+- 🔒 Rate limiting and input sanitization for security
 
 ## Setup Instructions
 
@@ -99,6 +107,11 @@ The app uses Claude AI (Anthropic API) to generate intelligent recipes. The back
 - `npm run dev:all` - Run both frontend and backend concurrently
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
+- `npm test` - Run tests in watch mode
+- `npm run test:ui` - Run tests with UI
+- `npm run lint` - Check for linting errors
+- `npm run lint:fix` - Auto-fix linting errors
+- `npm run format` - Format code with Prettier
 
 ## Technologies
 

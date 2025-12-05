@@ -9,6 +9,8 @@ export default function GetRecipeButton({ onGetRecipe, loading }) {
                 onClick={onGetRecipe} 
                 className="get-recipe-btn"
                 disabled={loading}
+                aria-label={loading ? "Generating recipe, please wait" : "Generate recipe from ingredients"}
+                aria-busy={loading}
             >
                 {loading ? "Generating..." : "Get a recipe"}
             </button>

@@ -33,37 +33,64 @@ export function generateFallbackRecipe(ingredients) {
     }
 }
 
-export async function fetchRecipeFromAPI(ingredients) {
-    const response = await fetch('/api/generate-recipe', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ingredients })
-    })
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const errorMsg = errorData.error || 'Failed to generate recipe'
-        // Make API key errors more helpful
-        if (errorMsg.includes('API key') || errorMsg.includes('not configured')) {
-            throw new Error(`API Configuration Error: ${errorMsg}. Please check your .env file and ensure CLAUDE_API_KEY is set.`)
+// Create a fetch with timeout
+function fetchWithTimeout(url, options, timeout = 30000) {
+    const controller = options.signal || new AbortController()
+    const timeoutId = setTimeout(() => {
+        if (!options.signal) {
+            controller.abort()
         }
-        throw new Error(errorMsg)
-    }
+    }, timeout)
 
-    const generatedRecipe = await response.json()
+    return fetch(url, {
+        ...options,
+        signal: controller.signal
+    }).finally(() => {
+        clearTimeout(timeoutId)
+    })
+}
+
+export async function fetchRecipeFromAPI(ingredients, signal = null) {
+    const controller = signal || new AbortController()
     
-    // If server indicates to use fallback, return as-is (will be handled by hook)
-    if (generatedRecipe._fallback || generatedRecipe._useFallback) {
-        return generatedRecipe
-    }
-    
-    // Ensure recipe has all required fields
-    if (generatedRecipe.name && generatedRecipe.instructions) {
-        return generatedRecipe
-    } else {
-        throw new Error('Invalid recipe format received')
+    try {
+        const response = await fetchWithTimeout('/api/generate-recipe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ingredients }),
+            signal: controller.signal
+        })
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            const errorMsg = errorData.error || 'Failed to generate recipe'
+            // Make API key errors more helpful
+            if (errorMsg.includes('API key') || errorMsg.includes('not configured')) {
+                throw new Error(`API Configuration Error: ${errorMsg}. Please check your .env file and ensure CLAUDE_API_KEY is set.`)
+            }
+            throw new Error(errorMsg)
+        }
+
+        const generatedRecipe = await response.json()
+        
+        // If server indicates to use fallback, return as-is (will be handled by hook)
+        if (generatedRecipe._fallback || generatedRecipe._useFallback) {
+            return generatedRecipe
+        }
+        
+        // Ensure recipe has all required fields
+        if (generatedRecipe.name && generatedRecipe.instructions) {
+            return generatedRecipe
+        } else {
+            throw new Error('Invalid recipe format received')
+        }
+    } catch (error) {
+        if (error.name === 'AbortError' || error.message === 'Request timeout') {
+            throw new Error('Request took too long. Please try again.')
+        }
+        throw error
     }
 }
 
